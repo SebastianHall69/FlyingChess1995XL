@@ -1,0 +1,10 @@
+[package]
+name = "FlyingChess1995XL"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ctrlc = "3.4.5"
+reqwest = "0.12.12"
+thirtyfour = "0.35.0"
+tokio = { version = "1.43.0", features = ["full"] }
