@@ -1,1 +1,1 @@
-pub mod browser;
+pub mod chess_dot_com_interface;

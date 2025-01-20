@@ -1,9 +1,9 @@
+use crate::web_interface::chess_dot_com_interface::ChessDotComInterface;
 use std::collections::HashMap;
 use std::error::Error;
 use std::process;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use thirtyfour::WebDriver;
 
 #[derive(Debug)]
 pub enum Color {
@@ -23,8 +23,8 @@ pub enum GameState {
 }
 
 pub struct StandardChessGame {
-    color: Color,
-    game_state: HashMap<String, String>,
+    _color: Color,
+    _game_state: HashMap<String, String>,
     stockfish: process::Child,
     should_run_state_machine_flag: Arc<Mutex<bool>>,
 }
@@ -32,18 +32,20 @@ pub struct StandardChessGame {
 impl StandardChessGame {
     pub fn new(should_run_state_machine_flag: Arc<Mutex<bool>>) -> Result<Self, Box<dyn Error>> {
         Ok(Self {
-            color: Color::White,
-            game_state: HashMap::new(),
+            _color: Color::White,
+            _game_state: HashMap::new(),
             stockfish: spawn_stockfish_process()?,
             should_run_state_machine_flag,
         })
     }
 
-    pub async fn run_match_state_machine(&self, selenium: &WebDriver) -> Result<(), Box<dyn Error>> {
+    pub async fn run_match_state_machine(
+        &self,
+        web_interface: &ChessDotComInterface,
+    ) -> Result<(), Box<dyn Error>> {
         let mut state = GameState::EntryPoint;
 
-        while self.should_run_match_state_machine().await? {
-            // TODO: FIX
+        while self.should_run_match_state_machine(web_interface).await? {
             println!("Current state: {:?}", state);
 
             match state {
@@ -75,15 +77,19 @@ impl StandardChessGame {
                 GameState::Error => println!("I really really don't know how I ended up here"),
             }
 
-            tokio::time::sleep(Duration::from_millis(300)).await;
+            println!();
+            tokio::time::sleep(Duration::from_millis(1500)).await; // TODO: DON'T FORGET TO REMOVE THIS DELAY
         }
 
         Ok(())
     }
 
-    async fn should_run_match_state_machine(&self) -> Result<bool, Box<dyn Error>> {
+    async fn should_run_match_state_machine(
+        &self,
+        web_interface: &ChessDotComInterface,
+    ) -> Result<bool, Box<dyn Error>> {
         let should_run_match = *self.should_run_state_machine_flag.lock().unwrap() == true
-            && is_match_in_progress().await?; // TODO: IMPLEMENT THIS
+            && web_interface.is_match_in_progress().await?;
         Ok(should_run_match)
     }
 }
