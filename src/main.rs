@@ -8,27 +8,21 @@ use std::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let mut bot = ChessBot::new().await?;
-    bot.run_bot_state_machine().await?;
-    Ok(())
+    let bot = ChessBot::new().await?;
+    bot.run_bot_state_machine().await
 }
 
 /*
-<wc-chess-board>
-    - id = 'board-single' - to locate chess board
-    - class = 'flipped' for black
-
+NOTES
 <wc-simple-move-list>
     - class = 'move-list-row' - locate all moves played
     - get latest
     - class = 'white-move' or 'black-move' to determine latest move
+ */
 
-<div>
-    - class = 'clock-bottom' locate player clock
-    - class = 'clock-player-turn' - identify if its a player's turn
-
-Find all 4 new game buttons
-- aria-label "Accept Rematch", "Decline Rematch", "Rematch", "button:not([aria-label])" for new game
-- find button with <span>New xx min<span/>
-
+/*
+BUGS
+- Using resign button for is_match_in_progress breaks on daily chess. We hate daily chess though so
+  this is fine for now. We can use clock icon instead to indicate match start and end game modal to
+  indicate match over
  */

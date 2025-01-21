@@ -1,3 +1,4 @@
+use crate::chess_game::standard_chess_game::Color;
 use std::error::Error;
 use std::process;
 use std::time::Duration;
@@ -40,7 +41,7 @@ impl ChessDotComInterface {
     pub async fn requeue(&self) -> Result<bool, Box<dyn Error>> {
         let requeue_button_div = self
             .selenium
-            .find(By::Css("div[class='game-over-buttons-component']"))
+            .find(By::Css("div.game-over-buttons-component"))
             .await?;
 
         let new_game_button = requeue_button_div
@@ -69,17 +70,37 @@ impl ChessDotComInterface {
         Ok(false)
     }
 
-    pub async fn is_match_in_progress(&self) -> Result<bool, Box<dyn Error>> {
+    pub async fn is_match_in_progress(&self) -> bool {
         // Presence of resign button indicates match is in progress
-        let resign_match_label = self
-            .selenium
-            .find(By::Css("span.resign-button-label"))
-            .await;
+        self.selenium
+            .find(By::Css("button.resign-button-component"))
+            .await
+            .map_or(false, |_| true)
+    }
 
-        match resign_match_label {
-            Ok(_) => Ok(true),
-            Err(_) => Ok(false),
-        }
+    pub async fn get_piece_color(&self) -> Result<Color, Box<dyn Error>> {
+        // Board class has 'flipped' when playing as black
+        self.selenium
+            .find(By::Css("wc-chess-board#board-single"))
+            .await?
+            .class_name()
+            .await?
+            .map(|class| match class.contains("flipped") {
+                true => Color::Black,
+                false => Color::White,
+            })
+            .ok_or_else(|| "Could not find color".into())
+    }
+
+    pub async fn is_my_turn(&self) -> Result<bool, Box<dyn Error>> {
+        // Bottom clock class has 'clock-player-turn' when it is my turn
+        self.selenium
+            .find(By::Css("div.clock-bottom"))
+            .await?
+            .class_name()
+            .await?
+            .map(|class| class.contains("clock-player-turn"))
+            .ok_or_else(|| "Could not identify turn".into())
     }
 }
 

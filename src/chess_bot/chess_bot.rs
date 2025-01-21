@@ -29,7 +29,7 @@ impl ChessBot {
         Ok(chess_bot)
     }
 
-    pub async fn run_bot_state_machine(&mut self) -> Result<(), Box<dyn Error>> {
+    pub async fn run_bot_state_machine(&self) -> Result<(), Box<dyn Error>> {
         let mut state = BotState::EntryPoint;
 
         while self.should_run_bot_state_machine() {
@@ -45,7 +45,7 @@ impl ChessBot {
                     }
                 }
                 BotState::WaitingForMatch => {
-                    let is_match_found = self.web_interface.is_match_in_progress().await?;
+                    let is_match_found = self.web_interface.is_match_in_progress().await;
                     println!("match found: {is_match_found}");
                     match is_match_found {
                         true => state = BotState::PlayMatch,

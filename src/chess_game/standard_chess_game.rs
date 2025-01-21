@@ -23,7 +23,7 @@ pub enum GameState {
 }
 
 pub struct StandardChessGame {
-    _color: Color,
+    color: Color,
     _game_state: HashMap<String, String>,
     stockfish: process::Child,
     should_run_state_machine_flag: Arc<Mutex<bool>>,
@@ -32,7 +32,7 @@ pub struct StandardChessGame {
 impl StandardChessGame {
     pub fn new(should_run_state_machine_flag: Arc<Mutex<bool>>) -> Result<Self, Box<dyn Error>> {
         Ok(Self {
-            _color: Color::White,
+            color: Color::White,
             _game_state: HashMap::new(),
             stockfish: spawn_stockfish_process()?,
             should_run_state_machine_flag,
@@ -40,7 +40,7 @@ impl StandardChessGame {
     }
 
     pub async fn run_match_state_machine(
-        &self,
+        &mut self,
         web_interface: &ChessDotComInterface,
     ) -> Result<(), Box<dyn Error>> {
         let mut state = GameState::EntryPoint;
@@ -51,14 +51,18 @@ impl StandardChessGame {
             match state {
                 GameState::EntryPoint => state = GameState::Setup,
                 GameState::Setup => {
-                    // Get color
+                    self.color = web_interface.get_piece_color().await?;
+                    println!("I am playing as {:?}", self.color);
                     // Get starting positions
                     // Reset engine
+                    state = GameState::WaitForTurn;
                     println!("Setup not implemented yet");
                 }
                 GameState::WaitForTurn => {
-                    // Wait for clock
-                    println!("WaitForTurn not implemented yet");
+                    state = match web_interface.is_my_turn().await? {
+                        true => GameState::ReadVictimMove,
+                        false => GameState::WaitForTurn,
+                    };
                 }
                 GameState::ReadVictimMove => {
                     // Get piece position updates. Either real move or startpos if no moves yet
@@ -89,7 +93,7 @@ impl StandardChessGame {
         web_interface: &ChessDotComInterface,
     ) -> Result<bool, Box<dyn Error>> {
         let should_run_match = *self.should_run_state_machine_flag.lock().unwrap() == true
-            && web_interface.is_match_in_progress().await?;
+            && web_interface.is_match_in_progress().await;
         Ok(should_run_match)
     }
 }
