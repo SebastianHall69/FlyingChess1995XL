@@ -66,6 +66,17 @@ impl StandardChessGame {
                 }
                 GameState::ReadVictimMove => {
                     // Get piece position updates. Either real move or startpos if no moves yet
+                    let board = web_interface.get_positions().await?;
+
+                    for rank in board {
+                        for square in rank {
+                            let piece = square.unwrap_or_else(|| String::from("  "));
+                            print!(" {piece} ");
+                        }
+                        println!();
+                    }
+
+                    state = GameState::Error;
                     println!("ReadVictimMove not implemented yet");
                 }
                 GameState::GetMove => {

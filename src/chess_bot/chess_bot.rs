@@ -46,7 +46,6 @@ impl ChessBot {
                 }
                 BotState::WaitingForMatch => {
                     let is_match_found = self.web_interface.is_match_in_progress().await;
-                    println!("match found: {is_match_found}");
                     match is_match_found {
                         true => state = BotState::PlayMatch,
                         false => state = BotState::WaitingForMatch,

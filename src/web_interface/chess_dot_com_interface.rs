@@ -102,6 +102,37 @@ impl ChessDotComInterface {
             .map(|class| class.contains("clock-player-turn"))
             .ok_or_else(|| "Could not identify turn".into())
     }
+
+    pub async fn get_positions(&self) -> Result<Vec<Vec<Option<String>>>, Box<dyn Error>> {
+        let mut board: Vec<Vec<Option<String>>> = vec![vec![None; 8]; 8];
+        let piece_elements = self.selenium
+            .find_all(By::Css("div.piece"))
+            .await?;
+
+        for piece_element in piece_elements {
+            let piece_info: Vec<String> = piece_element
+                .class_name()
+                .await?
+                .unwrap()
+                .split_whitespace()
+                .skip(1)
+                .take(2)
+                .map(|item| item.to_string())
+                .collect();
+
+            let piece = piece_info[0].clone();
+            let position: usize = piece_info[1]
+                .trim_start_matches("square-")
+                .parse()?;
+
+            let file = position / 10 - 1;
+            let rank = position % 10 - 1;
+
+            board[rank][file] = Some(piece);
+        }
+
+        Ok(board)
+    }
 }
 
 impl Drop for ChessDotComInterface {
