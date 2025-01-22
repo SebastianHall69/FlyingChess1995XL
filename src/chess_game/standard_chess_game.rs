@@ -1,7 +1,7 @@
+use crate::engine::stockfish::Stockfish;
 use crate::web_interface::chess_dot_com_interface::ChessDotComInterface;
 use std::collections::HashMap;
 use std::error::Error;
-use std::process;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -25,7 +25,7 @@ pub enum GameState {
 pub struct StandardChessGame {
     color: Color,
     _game_state: HashMap<String, String>,
-    stockfish: process::Child,
+    _engine: Stockfish,
     should_run_state_machine_flag: Arc<Mutex<bool>>,
 }
 
@@ -34,7 +34,7 @@ impl StandardChessGame {
         Ok(Self {
             color: Color::White,
             _game_state: HashMap::new(),
-            stockfish: spawn_stockfish_process()?,
+            _engine: Stockfish::new()?,
             should_run_state_machine_flag,
         })
     }
@@ -95,29 +95,5 @@ impl StandardChessGame {
         let should_run_match = *self.should_run_state_machine_flag.lock().unwrap() == true
             && web_interface.is_match_in_progress().await;
         Ok(should_run_match)
-    }
-}
-
-impl Drop for StandardChessGame {
-    fn drop(&mut self) {
-        self.stockfish
-            .kill()
-            .expect("Failed to kill stockfish process");
-    }
-}
-
-pub fn spawn_stockfish_process() -> Result<process::Child, Box<dyn Error>> {
-    let mut stockfish = process::Command::new("./bin/stockfish_engine")
-        .spawn()
-        .map_err(|err| Box::new(err) as Box<dyn Error>)?;
-    verify_stockfish_is_running(&mut stockfish)?;
-    Ok(stockfish)
-}
-
-fn verify_stockfish_is_running(process: &mut process::Child) -> Result<(), Box<dyn Error>> {
-    match process.try_wait() {
-        Ok(Some(_exit_status)) => Err(Box::from("Stockfish process not running")),
-        Ok(None) => Ok(()),
-        Err(err) => Err(Box::new(err)),
     }
 }

@@ -1,6 +1,7 @@
 mod chess_bot;
 mod chess_game;
 mod web_interface;
+mod engine;
 
 use chess_bot::chess_bot::ChessBot;
 
