@@ -12,8 +12,9 @@ impl Stockfish {
         })
     }
 
-    pub fn _get_move() {
+    pub fn _get_move() -> String {
         println!("Get move not yet implemented");
+        String::from("Move not yet implemented")
     }
 }
 

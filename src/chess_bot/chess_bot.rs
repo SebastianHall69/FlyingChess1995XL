@@ -56,7 +56,7 @@ impl ChessBot {
                     state = BotState::Requeue;
                 }
                 BotState::Requeue => {
-                    let is_requeue_successful = self.web_interface.requeue().await?;
+                    let is_requeue_successful = self.requeue().await?;
                     match is_requeue_successful {
                         true => state = BotState::WaitingForMatch,
                         false => state = BotState::Requeue,
@@ -80,6 +80,11 @@ impl ChessBot {
         StandardChessGame::new(self.should_run_state_machine_flag.clone())?
             .run_match_state_machine(&self.web_interface)
             .await
+    }
+
+    async fn requeue(&self) -> Result<bool, Box<dyn Error>> {
+        tokio::time::sleep(Duration::from_secs(10)).await;
+        self.web_interface.requeue().await
     }
 }
 

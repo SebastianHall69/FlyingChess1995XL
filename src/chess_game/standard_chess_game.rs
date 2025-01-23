@@ -1,6 +1,6 @@
+use crate::chess_game::board::Board;
 use crate::engine::stockfish::Stockfish;
 use crate::web_interface::chess_dot_com_interface::ChessDotComInterface;
-use std::collections::HashMap;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -17,14 +17,13 @@ pub enum GameState {
     Setup,
     WaitForTurn,
     ReadVictimMove,
-    GetMove,
     PlayMove,
     Error,
 }
 
 pub struct StandardChessGame {
     color: Color,
-    _game_state: HashMap<String, String>,
+    board: Board,
     _engine: Stockfish,
     should_run_state_machine_flag: Arc<Mutex<bool>>,
 }
@@ -33,7 +32,7 @@ impl StandardChessGame {
     pub fn new(should_run_state_machine_flag: Arc<Mutex<bool>>) -> Result<Self, Box<dyn Error>> {
         Ok(Self {
             color: Color::White,
-            _game_state: HashMap::new(),
+            board: Board::new(),
             _engine: Stockfish::new()?,
             should_run_state_machine_flag,
         })
@@ -51,12 +50,11 @@ impl StandardChessGame {
             match state {
                 GameState::EntryPoint => state = GameState::Setup,
                 GameState::Setup => {
-                    self.color = web_interface.get_piece_color().await?;
-                    println!("I am playing as {:?}", self.color);
-                    // Get starting positions
-                    // Reset engine
-                    state = GameState::WaitForTurn;
-                    println!("Setup not implemented yet");
+                    self.setup(&web_interface).await?;
+                    state = match self.color {
+                        Color::White => GameState::PlayMove,
+                        Color::Black => GameState::WaitForTurn,
+                    }
                 }
                 GameState::WaitForTurn => {
                     state = match web_interface.is_my_turn().await? {
@@ -65,29 +63,12 @@ impl StandardChessGame {
                     };
                 }
                 GameState::ReadVictimMove => {
-                    // Get piece position updates. Either real move or startpos if no moves yet
-                    let board = web_interface.get_positions().await?;
-
-                    for rank in board {
-                        for square in rank {
-                            let piece = square.unwrap_or_else(|| String::from("  "));
-                            print!(" {piece} ");
-                        }
-                        println!();
-                    }
-
-                    state = GameState::Error;
-                    println!("ReadVictimMove not implemented yet");
-                }
-                GameState::GetMove => {
-                    // Get stockfish move
-                    println!("GetMove not implemented yet");
+                    self.read_victim_move(&web_interface).await?;
+                    state = GameState::PlayMove;
                 }
                 GameState::PlayMove => {
-                    // Play move in browser
-                    // Report move to stockfish
-                    // Update positions map
-                    println!("PlayMove not implemented yet");
+                    self.play_move(&web_interface).await?;
+                    state = GameState::WaitForTurn;
                 }
                 GameState::Error => println!("I really really don't know how I ended up here"),
             }
@@ -96,6 +77,47 @@ impl StandardChessGame {
             tokio::time::sleep(Duration::from_millis(1500)).await; // TODO: DON'T FORGET TO REMOVE THIS DELAY
         }
 
+        Ok(())
+    }
+
+    async fn setup(&mut self, web_interface: &ChessDotComInterface) -> Result<(), Box<dyn Error>> {
+        self.color = web_interface.get_piece_color().await?;
+        let start_position = web_interface.get_position().await?;
+        self.board.update_position(start_position);
+        Ok(())
+    }
+
+    async fn read_victim_move(
+        &mut self,
+        web_interface: &ChessDotComInterface,
+    ) -> Result<(), Box<dyn Error>> {
+        let new_position = web_interface.get_position().await?;
+        let _victim_move = self
+            .board
+            .calculate_move_made_in_long_algebraic_notation(&new_position);
+
+        println!("VICTIM MADE MOVE: {:?}", _victim_move);
+
+        self.board.update_position(new_position);
+        // TODO: TELL STOCKFISH ABOUT MOVE
+        Ok(())
+    }
+
+    async fn play_move(
+        &mut self,
+        web_interface: &ChessDotComInterface,
+    ) -> Result<(), Box<dyn Error>> {
+        // Get move from stockfish
+        // Play move in browser
+        // Report move to stockfish
+        // TODO: REMOVE AFTER MOVING PIECE
+        println!("PlayMove not yet implemented");
+        while web_interface.is_my_turn().await? {
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+        let new_position = web_interface.get_position().await?;
+        self.board.update_position(new_position);
+        // TODO: REPORT MOVE TO THE FISH
         Ok(())
     }
 

@@ -1,3 +1,4 @@
+use crate::chess_game::square::Square;
 use crate::chess_game::standard_chess_game::Color;
 use std::error::Error;
 use std::process;
@@ -19,7 +20,7 @@ impl ChessDotComInterface {
 
     pub async fn login(&self) -> Result<bool, Box<dyn Error>> {
         self.selenium
-            .goto("https://www.chess.com/login_and_go?returnUrl=https://www.chess.com/")
+            .goto("https://www.chess.com/login_and_go?returnUrl=https://www.chess.com/play/online")
             .await?;
 
         let email_input = self.selenium.find(By::Css("input[type='email']")).await?;
@@ -103,11 +104,17 @@ impl ChessDotComInterface {
             .ok_or_else(|| "Could not identify turn".into())
     }
 
-    pub async fn get_positions(&self) -> Result<Vec<Vec<Option<String>>>, Box<dyn Error>> {
-        let mut board: Vec<Vec<Option<String>>> = vec![vec![None; 8]; 8];
-        let piece_elements = self.selenium
-            .find_all(By::Css("div.piece"))
-            .await?;
+    pub async fn get_position(&self) -> Result<Vec<Vec<Square>>, Box<dyn Error>> {
+        let mut position: Vec<Vec<Square>> = Vec::new();
+
+        for rank in 0..8 {
+            position.push(Vec::new());
+            for file in 0..8 {
+                position[rank].push(Square::new(rank, file, None));
+            }
+        }
+
+        let piece_elements = self.selenium.find_all(By::Css("div.piece")).await?;
 
         for piece_element in piece_elements {
             let piece_info: Vec<String> = piece_element
@@ -115,23 +122,30 @@ impl ChessDotComInterface {
                 .await?
                 .unwrap()
                 .split_whitespace()
-                .skip(1)
-                .take(2)
                 .map(|item| item.to_string())
                 .collect();
 
-            let piece = piece_info[0].clone();
-            let position: usize = piece_info[1]
+            let piece_type = piece_info
+                .iter()
+                .find(|str| str.len() == 2)
+                .unwrap()
+                .clone();
+
+            let piece_coordinates: usize = piece_info
+                .iter()
+                .find(|str| str.starts_with("square-"))
+                .unwrap()
                 .trim_start_matches("square-")
                 .parse()?;
 
-            let file = position / 10 - 1;
-            let rank = position % 10 - 1;
+            // Piece info would list position=48 for rank 4, file h
+            let file = piece_coordinates / 10 - 1;
+            let rank = piece_coordinates % 10 - 1;
 
-            board[rank][file] = Some(piece);
+            position[rank][file].set_piece(Some(piece_type));
         }
 
-        Ok(board)
+        Ok(position)
     }
 }
 
